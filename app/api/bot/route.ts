@@ -1,5 +1,6 @@
 import { Bot, webhookCallback } from 'grammy';
 import { supabase } from '@/src/lib/db';
+import { URL } from 'url';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing in .env.local');
@@ -26,8 +27,51 @@ bot.command('start', async (ctx) => {
     await ctx.reply('Welcome. I am your AI Gatekeeper. Send me an RSS feed link, and I will filter the noise for you.');
 });
 
-bot.on('message:text', async (ctx) => {
-    await ctx.reply(`You wrote: '${ctx.message.text}'. But my creator has not started developing me yet. Give him a couple of days.`);
+bot.command('add', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+
+    const url = ctx.match.trim();
+
+    if (!url) {
+        await ctx.reply('Invalid format. Use: /add <url>');
+        return;
+    }
+
+    try {
+        new URL(url);
+    } catch (error) {
+        await ctx.reply('This is not a valid URL. Try again.');
+        return;
+    }
+
+    const { data: source, error: sourceError } = await supabase
+        .from('sources')
+        .upsert({ url, type: 'rss' }, { onConflict: 'url' })
+        .select('id')
+        .single();
+
+    if (sourceError || !source) {
+        console.error('Source insert error:', sourceError);
+        await ctx.reply('Database rejected this source. Internal error.');
+        return;
+    }
+
+    const { error: subError } = await supabase
+        .from('user_subscriptions')
+        .insert({ user_id: userId, source_id: source.id });
+
+    if (subError) {
+        if (subError.code === '23505') {
+            await ctx.reply('You are already subscribed to this feed. Do not spam.');
+            return;
+        }
+        console.error('Subscription error:', subError);
+        await ctx.reply('Failed to link source to your profile.');
+        return;
+    }
+
+    await ctx.reply('Source accepted. I will monitor it.');
 });
 
 export const POST = webhookCallback(bot, 'std/http');
