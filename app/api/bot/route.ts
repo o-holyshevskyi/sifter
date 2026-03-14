@@ -139,5 +139,10 @@ bot.command('remove', async (ctx) => {
 const handleUpdate = webhookCallback(bot, 'std/http');
 
 export const POST = async (req: Request) => {
-    return handleUpdate(req);
+    try {
+        return await handleUpdate(req);
+    } catch (err) {
+        console.error('[Bot] Fatal error handling update:', err);
+        return new Response('OK', { status: 200 });
+    }
 };
