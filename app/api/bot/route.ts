@@ -110,7 +110,7 @@ bot.command('list', async (ctx) => {
         // @ts-ignore - Supabase types can be tricky with joins
         msg += `${index + 1}. ${sub.sources.url}\n`;
     });
-    msg += '\nTo remove a source, use /remove <url>';
+    msg += '\nTo remove a source, use /remove &lt;url&gt;';
 
     await ctx.reply(msg, { 
         parse_mode: 'HTML', 
