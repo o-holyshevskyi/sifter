@@ -84,10 +84,21 @@ bot.command('list', async (ctx) => {
     const userId = ctx.from?.id;
     if (!userId) return;
 
-    const { data: subs, error } = await supabase
-        .from('user_subscriptions')
-        .select('sources(id, url)')
-        .eq('user_id', userId);
+    let subs, error;
+    try {
+        ({ data: subs, error } = await supabase
+            .from('user_subscriptions')
+            .select('sources(id, url)')
+            .eq('user_id', userId));
+    } catch (err) {
+        console.error('[list] Supabase threw:', err);
+        await ctx.reply('Failed to fetch subscriptions. Try again later.');
+        return;
+    }
+
+    if (error) {
+        console.error('[list] Supabase error:', error);
+    }
 
     if (error || !subs || subs.length === 0) {
         await ctx.reply('You have no active subscriptions.');
