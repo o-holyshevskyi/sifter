@@ -23,7 +23,7 @@ export default function Home() {
 
         <p className="text-lg md:text-xl text-neutral-400 mb-10 max-w-2xl mx-auto">
           99% of your news feed is noise, clickbait, and marketing.
-          Sift AI reads hundreds of RSS feeds while you sleep and delivers only the top 1% critical updates straight to your Telegram.
+          SifterAI reads hundreds of RSS feeds while you sleep and delivers only the top 1% critical updates straight to your Telegram.
         </p>
 
         <Link
@@ -77,7 +77,7 @@ export default function Home() {
         <h2 className="text-3xl font-bold mb-12">The Reality Check</h2>
         <div className="flex flex-col md:flex-row gap-4 justify-center items-stretch">
           <div className="flex-1 p-6 rounded-2xl border border-red-900/30 bg-red-950/10 text-left">
-            <h4 className="text-red-400 font-semibold mb-4 text-lg">Without Sift</h4>
+            <h4 className="text-red-400 font-semibold mb-4 text-lg">Without SifterAI</h4>
             <ul className="space-y-3 text-neutral-400">
               <li>❌ 300+ unread tabs</li>
               <li>❌ Doomscrolling for 2 hours</li>
@@ -86,7 +86,7 @@ export default function Home() {
             </ul>
           </div>
           <div className="flex-1 p-6 rounded-2xl border border-emerald-900/30 bg-emerald-950/10 text-left">
-            <h4 className="text-emerald-400 font-semibold mb-4 text-lg">With Sift</h4>
+            <h4 className="text-emerald-400 font-semibold mb-4 text-lg">With SifterAI</h4>
             <ul className="space-y-3 text-neutral-300">
               <li>✅ 0 unread tabs</li>
               <li>✅ 3 minutes of reading per day</li>
@@ -100,7 +100,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-neutral-900 text-center py-12 text-neutral-600">
         <p>Stop scrolling. Start building.</p>
-        <p className="mt-2 text-sm">© {new Date().getFullYear()} Sift AI Curator.</p>
+        <p className="mt-2 text-sm">© {new Date().getFullYear()} SifterAI.</p>
       </footer>
     </main>
   );
