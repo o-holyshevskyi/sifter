@@ -8,6 +8,10 @@ if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing in .env.local');
 
 const bot = new Bot(token);
 
+bot.catch((err) => {
+    console.error('[Grammy] Unhandled error for update', JSON.stringify(err.ctx.update), err.error);
+});
+
 bot.command('start', async (ctx) => {
     const user = ctx.from;
     if (!user) return;
@@ -23,6 +27,7 @@ bot.command('start', async (ctx) => {
     if (error) {
         console.log('Supabase error: ', error.message);
         await ctx.reply('System failure. My creator messed up the database connection.');
+        return;
     }
 
     await ctx.reply('Welcome. I am your AI Gatekeeper. Send me an RSS feed link, and I will filter the noise for you.');
@@ -131,4 +136,8 @@ bot.command('remove', async (ctx) => {
     }
 });
 
-export const POST = webhookCallback(bot, 'std/http');
+const handleUpdate = webhookCallback(bot, 'std/http');
+
+export const POST = async (req: Request) => {
+    return handleUpdate(req);
+};
