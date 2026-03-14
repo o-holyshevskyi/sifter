@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/src/lib/db";
 import { fetchFeedItems } from "@/src/lib/rss";
 
-export async function GET() {
+export async function GET(req: Request) {
     console.log('--- STARTING CRON FETCH ---');
+
+    const authHeader = req.headers.get('authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        console.warn('Unauthorized cron attempt');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { data: sources, error: sourcesError } = await supabase
         .from('sources')

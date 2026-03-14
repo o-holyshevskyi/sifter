@@ -6,8 +6,14 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing');
 const bot = new Bot(token);
 
-export async function GET() {
+export async function GET(req: Request) {
     console.log('--- STARTING DIGEST CRON ---');
+
+    const authHeader = req.headers.get('authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        console.warn('Unauthorized cron attempt');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     // 1. Беремо всіх користувачів
     const { data: users, error: usersError } = await supabase.from('users').select('telegram_id');
