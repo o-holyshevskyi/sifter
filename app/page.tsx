@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function Home() {
   // Заміни на лінк свого бота
-  const BOT_URL = "https://t.me/ТвійБот_bot";
+  const BOT_URL = "https://t.me/sifter_ai_bot";
 
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-50 selection:bg-emerald-500 selection:text-white font-sans">
