@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Bot, webhookCallback } from 'grammy';
 import { supabase } from '@/src/lib/db';
 import { URL } from 'url';
@@ -72,6 +73,62 @@ bot.command('add', async (ctx) => {
     }
 
     await ctx.reply('Source accepted. I will monitor it.');
+});
+
+bot.command('list', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+
+    const { data: subs, error } = await supabase
+        .from('user_subscriptions')
+        .select('sources(id, url)')
+        .eq('user_id', userId);
+
+    if (error || !subs || subs.length === 0) {
+        await ctx.reply('You have no active subscriptions.');
+        return;
+    }
+
+    let msg = '📋 <b>Your Sources:</b>\n\n';
+    subs.forEach((sub, index) => {
+        // @ts-ignore - Supabase types can be tricky with joins
+        msg += `${index + 1}. ${sub.sources.url}\n`;
+    });
+    msg += '\nTo remove a source, use /remove <url>';
+
+    await ctx.reply(msg, { 
+        parse_mode: 'HTML', 
+        // disable_web_page_preview: true 
+    });
+});
+
+bot.command('remove', async (ctx) => {
+    const userId = ctx.from?.id;
+    const url = ctx.match.trim();
+
+    if (!userId || !url) {
+        await ctx.reply('Format: /remove <url>');
+        return;
+    }
+
+    // Шукаємо ID джерела
+    const { data: source } = await supabase.from('sources').select('id').eq('url', url).single();
+    if (!source) {
+        await ctx.reply('Source not found.');
+        return;
+    }
+
+    // Видаляємо зв'язок
+    const { error } = await supabase
+        .from('user_subscriptions')
+        .delete()
+        .match({ user_id: userId, source_id: source.id });
+
+    if (error) {
+        await ctx.reply('Failed to remove subscription.');
+    } else {
+        await ctx.reply('✅ Source removed successfully.');
+    }
 });
 
 export const POST = webhookCallback(bot, 'std/http');
