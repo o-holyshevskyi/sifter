@@ -21,9 +21,8 @@ export async function GET(req: Request) {
         return NextResponse.json({ message: 'No users found' });
     }
 
-    // Визначаємо час: новини за останні 24 години
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     let sentCount = 0;
+    const sentPostIds = new Set<number>();
 
     for (const user of users) {
         // 2. Беремо джерела, на які підписаний цей юзер
@@ -35,13 +34,13 @@ export async function GET(req: Request) {
         if (!subs || subs.length === 0) continue;
         const sourceIds = subs.map(s => s.source_id);
 
-        // 3. Беремо ТІЛЬКИ ВАЖЛИВІ новини (8+) для цих джерел
+        // 3. Беремо ТІЛЬКИ ВАЖЛИВІ новини (8+) для цих джерел, які ще не надсилались
         const { data: posts } = await supabase
             .from('posts')
-            .select('title, url, ai_score, ai_summary')
+            .select('id, title, url, ai_score, ai_summary')
             .in('source_id', sourceIds)
             .gte('ai_score', 8)
-            .gte('created_at', yesterday)
+            .is('digest_sent_at', null)
             .order('ai_score', { ascending: false });
 
         // Якщо нічого важливого не сталось — не турбуємо юзера. Це і є "Тиша".
@@ -67,9 +66,18 @@ export async function GET(req: Request) {
                 // disable_web_page_preview: true // Щоб не було величезних прев'ю посилань на півекрана
             });
             sentCount++;
+            posts.forEach(post => sentPostIds.add(post.id));
         } catch (err) {
             console.error(`Failed to send message to ${user.telegram_id}:`, err);
         }
+    }
+
+    // 6. Позначаємо всі надіслані пости як sent, щоб не дублювати в наступних дайджестах
+    if (sentPostIds.size > 0) {
+        await supabase
+            .from('posts')
+            .update({ digest_sent_at: new Date().toISOString() })
+            .in('id', Array.from(sentPostIds));
     }
 
     console.log(`--- DIGEST COMPLETE. Sent to ${sentCount} users ---`);
