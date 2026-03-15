@@ -30,7 +30,14 @@ bot.command('start', async (ctx) => {
         return;
     }
 
-    await ctx.reply('Welcome. I am your AI Gatekeeper. Send me an RSS feed link, and I will filter the noise for you.');
+    await ctx.reply(
+        'I am SifterAI.\n' +
+        'I read your RSS feeds, score every post 1–10 using AI, and trash anything below an 8. You only get the critical signal.\n\n' +
+        '<b>How to start:</b> Send me any valid RSS feed link.\n\n' +
+        "Don't have one on hand? Copy and paste this to test:\n<code>https://news.ycombinator.com/rss</code>\n\n" +
+        'Once added, I will scan it quietly and deliver your first high-signal digest when there\'s an 8+ match.',
+        { parse_mode: 'HTML' }
+    );
 });
 
 bot.command('add', async (ctx) => {
