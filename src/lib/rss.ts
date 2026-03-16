@@ -4,6 +4,15 @@ const parser = new Parser({
     timeout: 5000
 });
 
+export const validateFeed = async (url: string): Promise<boolean> => {
+    try {
+        const feed = await parser.parseURL(url);
+        return Array.isArray(feed.items);
+    } catch {
+        return false;
+    }
+};
+
 export const fetchFeedItems = async (url: string) => {
     try {
         const feed = await parser.parseURL(url);

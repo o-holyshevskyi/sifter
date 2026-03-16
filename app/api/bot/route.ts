@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Bot, webhookCallback, InlineKeyboard } from 'grammy';
 import { supabase } from '@/src/lib/db';
+import { validateFeed } from '@/src/lib/rss';
 import { URL } from 'url';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -111,8 +112,16 @@ bot.command('add', async (ctx) => {
 
     try {
         new URL(url);
-    } catch (error) {
+    } catch {
         await ctx.reply('This is not a valid URL. Try again.');
+        return;
+    }
+
+    await ctx.reply('Checking feed...');
+
+    const isValid = await validateFeed(url);
+    if (!isValid) {
+        await ctx.reply('Could not parse this RSS feed. Make sure the URL points to a valid RSS/Atom feed and try again.');
         return;
     }
 
