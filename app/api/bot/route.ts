@@ -203,6 +203,21 @@ bot.command('remove', async (ctx) => {
     }
 });
 
+bot.on('message:text', async (ctx) => {
+    const text = ctx.message.text.trim();
+    if (text.startsWith('/')) {
+        await ctx.reply(
+            'Unknown command. Available commands:\n' +
+            '/start — get started\n' +
+            '/add <url> — subscribe to an RSS feed\n' +
+            '/list — show your subscriptions\n' +
+            '/remove <url> — remove a subscription'
+        );
+    } else {
+        await ctx.reply('I only understand commands. Type /start to begin.');
+    }
+});
+
 const handleUpdate = webhookCallback(bot, 'std/http');
 
 export const POST = async (req: Request) => {
