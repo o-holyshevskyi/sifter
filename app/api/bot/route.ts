@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { Bot, webhookCallback } from 'grammy';
+import { Bot, webhookCallback, InlineKeyboard } from 'grammy';
 import { supabase } from '@/src/lib/db';
 import { URL } from 'url';
 
@@ -11,6 +11,38 @@ const bot = new Bot(token);
 bot.catch((err) => {
     console.error('[Grammy] Unhandled error for update', JSON.stringify(err.ctx.update), err.error);
 });
+
+const PRESET_FEEDS: Record<string, { label: string; url: string }> = {
+    preset_hn:      { label: 'Hacker News',  url: 'https://news.ycombinator.com/rss' },
+    preset_tc:      { label: 'TechCrunch',   url: 'https://techcrunch.com/feed/' },
+    preset_verge:   { label: 'The Verge',    url: 'https://www.theverge.com/rss/index.xml' },
+    preset_openai:  { label: 'OpenAI Blog',  url: 'https://openai.com/blog/rss.xml' },
+};
+
+async function subscribeUserToFeed(userId: number, url: string): Promise<'added' | 'duplicate' | 'error'> {
+    const { data: source, error: sourceError } = await supabase
+        .from('sources')
+        .upsert({ url, type: 'rss' }, { onConflict: 'url' })
+        .select('id')
+        .single();
+
+    if (sourceError || !source) {
+        console.error('Source insert error:', sourceError);
+        return 'error';
+    }
+
+    const { error: subError } = await supabase
+        .from('user_subscriptions')
+        .insert({ user_id: userId, source_id: source.id });
+
+    if (subError) {
+        if (subError.code === '23505') return 'duplicate';
+        console.error('Subscription error:', subError);
+        return 'error';
+    }
+
+    return 'added';
+}
 
 bot.command('start', async (ctx) => {
     const user = ctx.from;
@@ -30,14 +62,40 @@ bot.command('start', async (ctx) => {
         return;
     }
 
+    const keyboard = new InlineKeyboard()
+        .text('📰 Hacker News', 'preset_hn').row()
+        .text('📱 TechCrunch', 'preset_tc').row()
+        .text('💻 The Verge', 'preset_verge').row()
+        .text('🧠 OpenAI Blog', 'preset_openai');
+
     await ctx.reply(
-        'I am SifterAI.\n' +
-        'I read your RSS feeds, score every post 1–10 using AI, and trash anything below an 8. You only get the critical signal.\n\n' +
-        '<b>How to start:</b> Send me any valid RSS feed link.\n\n' +
-        "Don't have one on hand? Copy and paste this to test:\n<code>https://news.ycombinator.com/rss</code>\n\n" +
-        'Once added, I will scan it quietly and deliver your first high-signal digest when there\'s an 8+ match.',
-        { parse_mode: 'HTML' }
+        'I am SifterAI. I score news 1–10 and trash the noise.\n\n' +
+        'Send me any valid RSS link, OR pick a predefined feed below to test the magic instantly:',
+        { reply_markup: keyboard }
     );
+});
+
+bot.on('callback_query:data', async (ctx) => {
+    const userId = ctx.from.id;
+    const data = ctx.callbackQuery.data;
+
+    const preset = PRESET_FEEDS[data];
+    if (!preset) {
+        await ctx.answerCallbackQuery();
+        return;
+    }
+
+    await ctx.answerCallbackQuery();
+
+    const result = await subscribeUserToFeed(userId, preset.url);
+
+    if (result === 'added') {
+        await ctx.reply(`${preset.label} added. Scanning for 8/10+ signals...`);
+    } else if (result === 'duplicate') {
+        await ctx.reply(`You are already subscribed to ${preset.label}.`);
+    } else {
+        await ctx.reply(`Failed to add ${preset.label}. Internal error.`);
+    }
 });
 
 bot.command('add', async (ctx) => {
@@ -58,33 +116,15 @@ bot.command('add', async (ctx) => {
         return;
     }
 
-    const { data: source, error: sourceError } = await supabase
-        .from('sources')
-        .upsert({ url, type: 'rss' }, { onConflict: 'url' })
-        .select('id')
-        .single();
+    const result = await subscribeUserToFeed(userId, url);
 
-    if (sourceError || !source) {
-        console.error('Source insert error:', sourceError);
+    if (result === 'added') {
+        await ctx.reply('Source accepted. I will monitor it.');
+    } else if (result === 'duplicate') {
+        await ctx.reply('You are already subscribed to this feed. Do not spam.');
+    } else {
         await ctx.reply('Database rejected this source. Internal error.');
-        return;
     }
-
-    const { error: subError } = await supabase
-        .from('user_subscriptions')
-        .insert({ user_id: userId, source_id: source.id });
-
-    if (subError) {
-        if (subError.code === '23505') {
-            await ctx.reply('You are already subscribed to this feed. Do not spam.');
-            return;
-        }
-        console.error('Subscription error:', subError);
-        await ctx.reply('Failed to link source to your profile.');
-        return;
-    }
-
-    await ctx.reply('Source accepted. I will monitor it.');
 });
 
 bot.command('list', async (ctx) => {
@@ -119,9 +159,9 @@ bot.command('list', async (ctx) => {
     });
     msg += '\nTo remove a source, use /remove &lt;url&gt;';
 
-    await ctx.reply(msg, { 
-        parse_mode: 'HTML', 
-        // disable_web_page_preview: true 
+    await ctx.reply(msg, {
+        parse_mode: 'HTML',
+        // disable_web_page_preview: true
     });
 });
 
